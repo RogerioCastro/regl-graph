@@ -1,0 +1,42 @@
+{
+  "name": "regl-graph",
+  "version": "1.0.0",
+  "description": "Interactive regl graph",
+  "main": "dist/regl-graph.min.js",
+  "module": "src/graph/graph.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "webpack serve --open --config webpack.dev.js",
+    "start-no-open": "webpack serve --config webpack.dev.js",
+    "build": "webpack --config webpack.prod.js"
+  },
+  "keywords": [],
+  "author": "Rogério Castro",
+  "license": "MIT",
+  "devDependencies": {
+    "babel-eslint": "^10.1.0",
+    "css-loader": "^5.2.6",
+    "eslint": "^7.27.0",
+    "html-webpack-plugin": "^5.3.1",
+    "sass": "^1.34.0",
+    "sass-loader": "^11.1.1",
+    "style-loader": "^2.0.0",
+    "webpack": "^5.37.1",
+    "webpack-cli": "^4.7.0",
+    "webpack-dev-server": "^3.11.2",
+    "webpack-glsl-loader": "^1.0.1",
+    "webpack-merge": "^5.7.3"
+  },
+  "dependencies": {
+    "d3": "^6.7.0",
+    "gl-mat4": "^1.2.0",
+    "gl-matrix": "^3.3.0",
+    "kdbush": "^3.0.0",
+    "lodash": "^4.17.21",
+    "mongodb": "^3.6.9",
+    "ngraph.graph": "^19.1.0",
+    "regl": "^2.1.0",
+    "regl-line": "^0.4.4",
+    "tippy.js": "^6.3.1"
+  }
+}
