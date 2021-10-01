@@ -33,7 +33,6 @@
     "gl-matrix": "^3.3.0",
     "kdbush": "^3.0.0",
     "lodash": "^4.17.21",
-    "mongodb": "^3.6.9",
     "ngraph.graph": "^19.1.0",
     "regl": "^2.1.0",
     "regl-line": "^0.4.4",
