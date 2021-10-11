@@ -2,6 +2,8 @@
 
 Biblioteca para geração de grafo (rede) interativo, utilizando [regl](https://github.com/regl-project/regl).
 
+<p align="center"><img src="https://raw.githubusercontent.com/RogerioCastro/regl-graph/main/dist/example.png"></p>
+
 ## Instalação
 
 Baixe o arquivo de produção da biblioteca que está localizado no diretório [`/dist`](/dist) e acrescente-o à `HEAD` da página. 
