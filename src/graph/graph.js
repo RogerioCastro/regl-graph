@@ -194,8 +194,8 @@ export default class ReglGraph {
 
   /**
    * ----------------------------------------------------------------------
-   * Cria o canvas e retorna o mesmo como resultado de uma Promise
-   * @returns Promise que resolve para o elemento HTML canvas
+   * Cria e retorna o canvas
+   * @returns HTMLCanvasElement
    */
   initCanvas () {
     const canvas = document.createElement('canvas')
