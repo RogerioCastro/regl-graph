@@ -170,6 +170,7 @@ export default class ReglGraph {
     select(`#${this.app.canvasID}`)
       .on('mousedown', this.handleMouseDown.bind(this))
       .on('mousemove', this.handleMouseMove.bind(this))
+      .on('mouseout', this.handleNouseOut.bind(this))
       .on('click', this.handleClick.bind(this))
       .call(this.app.zoom)
       .on('dblclick.zoom', null)
@@ -469,6 +470,15 @@ export default class ReglGraph {
   }
 
   /**
+   * Manipulando o evento mouseout no grafo
+   */
+  handleNouseOut () {
+    this.setHoveredNode()
+    this.setCursorStyle('default')
+    this.tooltip.hide()
+  }
+
+  /**
    * Manipulando o evento click no grafo
    * @param {Object} event Evento
    */
@@ -717,7 +727,6 @@ export default class ReglGraph {
     const scaling = 1
 
     const scaledPointSize =
-      5 *
       pointSize *
       (this.minNumber(1.0, scaling) + Math.log2(this.maxNumber(1.0, scaling))) *
       window.devicePixelRatio
