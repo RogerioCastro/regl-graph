@@ -98,6 +98,7 @@ export default class ReglGraph {
       regl: null,
       graph: null,
       nodeIndex: null,
+      sizeIndex: null,
       searchIndex: null,
       zoom: null,
       tooltip: null
@@ -218,6 +219,7 @@ export default class ReglGraph {
     const edges = data.edges
     this.app.graph = createGraph()
     this.app.nodeIndex = new Map()
+    this.app.sizeIndex = new Map()
     this.matrices = {
       nodesPositions: [],
       edgesPositionsByWeight: new Map(),
@@ -310,6 +312,7 @@ export default class ReglGraph {
       })
       // Alimentando o índice de nós
       this.app.nodeIndex.set(i, node.id)
+      this.app.sizeIndex.set(i, size)
       // Preenchendo os arrays para os shaders
       this.matrices.nodesPositions.push(position)
       this.matrices.nodeColors.push(node.color ? this.glslColor(node.color, defaultNodesOpacity) : [1, 1, 1, defaultNodesOpacity])
@@ -448,7 +451,7 @@ export default class ReglGraph {
     if (!this.state.mouseDown) {
       const closestPoint = this.raycast()
       const format = this.getOption('tooltipFormat')
-      if (closestPoint) {
+      if (closestPoint !== -1) {
         /* // setHoverNeighbors deve sempre vir antes de setHoveredNode
         if (closestPoint !== this.getHoveredNode()) {
           this.setHoverNeighbors(closestPoint)
@@ -486,7 +489,7 @@ export default class ReglGraph {
     const closestPoint = this.raycast()
     let node = null
     this.highlight()
-    if (closestPoint) {
+    if (closestPoint !== -1) {
       this.setSelectedNode(closestPoint)
       node = this.getNodeByIndex(closestPoint)
     } else {
@@ -718,40 +721,29 @@ export default class ReglGraph {
   }
 
   /**
-   * Elencando um ponto em um raio ou área
-   * @returns Índice do ponto encontrado
+   * Buscando e selecionando um ponto (nó) em um raio ou área
+   * @returns Índice do ponto (nó) encontrado
    */
   raycast () {
-    let pointSize = 1000; //scale to zoom level
     const [mouseX, mouseY] = this.getScatterGlPos()
-    const scaling = 1
 
-    const scaledPointSize =
-      pointSize *
-      (this.minNumber(1.0, scaling) + Math.log2(this.maxNumber(1.0, scaling))) *
-      window.devicePixelRatio
-
-    const xNormalizedScaledPointSize = scaledPointSize / this.app.width
-    const yNormalizedScaledPointSize = scaledPointSize / this.app.height
+    const searchAreaSize = this.searchIndex.nodeSize // Default: 64
 
     // Obtendo todos os pontos em uma faixa próxima
     const pointsInBBox = this.searchIndex.range(
-      mouseX - xNormalizedScaledPointSize,
-      mouseY - yNormalizedScaledPointSize,
-      mouseX + xNormalizedScaledPointSize,
-      mouseY + yNormalizedScaledPointSize
+      mouseX - searchAreaSize / 2,
+      mouseY - searchAreaSize / 2,
+      mouseX + searchAreaSize / 2,
+      mouseY + searchAreaSize / 2
     )
-    // console.log('pointsInBBox:', pointsInBBox)
-    // Find the closest point
-    let minDist = scaledPointSize
-    let closestPoint
+    let closestPoint = -1
 
     pointsInBBox.forEach(idx => {
       const [x, y] = this.searchIndex.points[idx]
       const d = this.distance(x, y, mouseX, mouseY)
-      // if (d < minDist && attributes.stateIndex[1] !== 0) {
+      // O nó é redimensionado de acordo com o nível de zoom para melhorar a visualização
+      const minDist = (this.app.sizeIndex.get(idx) / 2) * (Math.exp(Math.log(this.state.transform[0]) * -0.5))
       if (d < minDist) {
-        minDist = d
         closestPoint = idx
       }
     })
