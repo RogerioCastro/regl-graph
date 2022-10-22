@@ -8,13 +8,11 @@ html, body {
 body {
   background: rgb(0,0,0);
   background-image: radial-gradient(circle, #0f022a, #17001e, #170013, #100007, #000000);
-  // background: radial-gradient(circle, rgba(13,5,43,1) 0%, rgba(0,0,0,1) 100%);
-  // background: radial-gradient(circle, #020421 0%, #000000 100%);
+  overflow: hidden;
 }
 
 #graph-container {
   width: 100vw;
   height: 100vh;
   box-sizing: border-box;
-  padding: 10px;
 }
