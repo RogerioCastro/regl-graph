@@ -1,6 +1,5 @@
 import ReglGraph from './graph/graph'
-import data from './data/npm-deps.json'
-// import data from './data/mobile-banking.json'
+import { json } from 'd3'
 import './style.scss'
 
 const reglGraph = window.ReglGraph
@@ -12,13 +11,20 @@ const container = document.createElement('div')
 container.id = 'graph-container'
 document.body.appendChild(container)
 
-const graph = new reglGraph(container, data, {
-  containerMargin: 20,
-  defaultEdgesColor: '#00FF00',
-  selectedCircleColor: '#FFFFFF',
-  tooltipAttributes: ['size'],
-  tooltipFormat: (node) => `${node.data.label}`
+json('data.json').then((data) => {
+  const graph = new reglGraph(container, data, {
+    defaultEdgesColor: '#FF0000',
+    selectedCircleColor: '#FFFFFF',
+    defaultEdgesOpacity: 0.8,
+    tooltipAttributes: ['size'],
+    tooltipFormat: (node) => `${node.data.label}`
+  })
 })
+.catch((error) => {
+  // eslint-disable-next-line no-console
+  console.error('Erro na leitura dos dados JSON:', error)
+})
+
 /* console.log('Data:', data)
 console.log('Graph:', graph)
 console.log('Settings:', graph.getOption())
