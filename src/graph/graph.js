@@ -19,13 +19,14 @@ import * as _get from 'lodash/get' // https://lodash.com/docs/
 import * as _has from 'lodash/has' // https://lodash.com/docs/
 import * as _set from 'lodash/set' // https://lodash.com/docs/
 import { drawPoints, drawEdges, drawCircle } from './commands'
-import { createTooltip } from './tooltip'
+import EventManager from './events'
+import createTooltip from './tooltip'
 import './style.scss'
 
 /**
  * Classe ReglGraph
  */
-export default class ReglGraph {
+export default class ReglGraph extends EventManager {
   /**
    * Construtor do objeto ReglGraph
    * @param {HTMLElement} container Elemento HTML container. Ex.: div
@@ -35,6 +36,7 @@ export default class ReglGraph {
    * @param {Object} [options] Configurações do grafo
    */
   constructor(container, data, options = {}) {
+    super()
     /**
      * Verificações iniciais
      */
@@ -62,8 +64,6 @@ export default class ReglGraph {
     this.tooltip = null
     // Módulo de buscas de pontos em uma área ou raio
     this.searchIndex = null
-    // Eventos da biblioteca
-    this.events = {}
     // Armazena os watchers que monitoram alterações em variáveis
     this.watchers = {}
     // Utilizada para converter valores RGB para valores de 0 a 1
@@ -402,7 +402,7 @@ export default class ReglGraph {
     // console.log('zoom:', settings.transform)
     this.render()
     // Disponibilizando o evento na biblioteca
-    this.raiseEvent('zoom', event.transform)
+    this.emit('zoom', event.transform)
     if (this.state.mouseDown) {
       this.setCursorStyle('move')
       // console.log('mousedown:', this.state.mouseDown)
@@ -496,7 +496,7 @@ export default class ReglGraph {
       this.setSelectedNode()
     }
     // Disponibilizando o evento na biblioteca
-    this.raiseEvent('click', { event, node })
+    this.emit('click', { event, node })
   }
 
   /**
@@ -511,7 +511,7 @@ export default class ReglGraph {
         this.setSelectedNeighbors(idx)
         // console.log('nó selecionado:', node)
         // Disponibilizando o evento na biblioteca
-        this.raiseEvent('nodeselect', node)
+        this.emit('nodeselect', node)
       } else {
         this.setSelectedNeighbors()
       }
@@ -914,35 +914,6 @@ export default class ReglGraph {
   }
 
   /**
-   * Adiciona ações (funções) aos eventos da biblioteca
-   * @param {String} eventName Nome do evento
-   * @param {Function} handler Função a ser executada no evento
-   */
-  on (eventName, handler) {
-    if(!(eventName in this.events)) {
-      this.events[eventName] = []
-    }
-    this.events[eventName].push(handler)
-  }
-
-  /**
-   * Cria eventos da biblioteca que podem ser utilizados pelo usuário
-   * @param {String} eventName Nome do evento
-   * @param {*} args Argumento a ser entregue à função atribuída ao evento
-   */
-  raiseEvent(eventName, args) {
-    const actions = this.events[eventName]
-    if(!actions) {
-      return
-    }
-    for (let i = 0, l = actions.length; i < l; i++) {
-      if(typeof actions[i] == 'function') {
-        actions[i](args)
-      }
-    }
-  }
-
-  /**
    * Monitora as modificações na variável 'this.state.hoveredNode' para disparar os
    * eventos nodeover e nodeout
    * @param {Number} value Novo índice do nó ou -1 para nenhum
@@ -952,10 +923,10 @@ export default class ReglGraph {
     // console.info('[hoveredNode] Valor modificado:', value)
     if (value === -1 && oldValue !== -1) {
       // Disponibilizando o evento na biblioteca
-      this.raiseEvent('nodeout', this.getNodeByIndex(oldValue))
+      this.emit('nodeout', this.getNodeByIndex(oldValue))
     } else {
       // Disponibilizando o evento na biblioteca
-      this.raiseEvent('nodeover', this.getNodeByIndex(value))
+      this.emit('nodeover', this.getNodeByIndex(value))
     }
   }
 

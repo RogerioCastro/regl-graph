@@ -7,7 +7,7 @@ import 'tippy.js/themes/light-border.css'
  * Cria o controlador de tooltips em um elemento HTML
  * @param {HTMLElement} target Elemento HTML que receberá a funcionalidade
  */
-export function createTooltip (target) {
+export default function createTooltip (target) {
   // Configurando a tooltip
   const tooltip = tippy(target, {
     followCursor: true,
