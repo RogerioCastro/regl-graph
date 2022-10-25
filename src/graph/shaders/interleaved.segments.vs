@@ -22,7 +22,8 @@ void main() {
   vec2 xyPointB = vec2(pointB.xy);
   vec2 xBasis = xyPointB - xyPointA;
   vec2 yBasis = normalize(vec2(-xBasis.y, xBasis.x));
-  vec2 point = xyPointA + xBasis * position.x + yBasis * width * position.y;
+  float size = width * (exp(log(zoom) * -0.5));
+  vec2 point = xyPointA + xBasis * position.x + yBasis * size * position.y;
   vec3 final = projection * transform * vec3(point, 1);
   gl_Position = vec4(final.xy, 0, 1);
   if (selected != -1.0 && pointA.z != selected && pointB.z != selected) edgeColor.a = 0.0;

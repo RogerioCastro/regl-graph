@@ -10,7 +10,7 @@ uniform float zoom;
 
 void main () {
 
-  float circleSize = size * (0.5 * (exp(log(zoom) * -0.5)));
+  float circleSize = size * (0.5 * (exp(log(zoom) * -0.3)));
 
   vec2 xy = vec2(position.xy) + circlePoint * (circleSize * 1.5);
   vec3 final = projection * transform * vec3(xy, 1);

@@ -79,12 +79,12 @@ export default class ReglGraph extends EventManager {
       defaultNodesOpacity: 1,
       defaultEdgesOpacity: 0.05,
       defaultEdgesColor: '#FFFFFF',
-      edgesWeightRange: [1, 5],
+      edgesWeightRange: [1, 10],
       containerMargin: 0,
       zoomExtent: [1, 500],
       drawSelectedCircle: true,
       selectedCircleColor: '#dfff00',
-      selectedCirclePoints: 30,
+      selectedCirclePoints: 50,
       tooltipAttributes: [],
       tooltipFormat: this.tooltipDefaultFormat,
       log: true
@@ -399,7 +399,7 @@ export default class ReglGraph extends EventManager {
     // settings.transform = e.transform
     const { x, y, k } = event.transform
     this.updateTransform(x, y, k)
-    // console.log('zoom:', settings.transform)
+    // console.log('zoom:', this.state.transform)
     this.render()
     // Disponibilizando o evento na biblioteca
     this.emit('zoom', event.transform)
@@ -426,7 +426,7 @@ export default class ReglGraph extends EventManager {
    */
   handleMouseDown (event) {
     this.state.mouseDown = true
-    // console.log('mousedown', this.state.mouseDown)
+    // console.log('mousedown', this.state.hoveredNode)
   }
 
   /**
@@ -439,7 +439,7 @@ export default class ReglGraph extends EventManager {
       this.state.inAnimation = false
     }
     this.render()
-    // console.log('mouseup', this.state.mouseDown)
+    // console.log('mouseup', this.state.hoveredNode)
   }
 
   /**
@@ -470,6 +470,7 @@ export default class ReglGraph extends EventManager {
         this.tooltip.hide()
       }
     }
+    // console.log('mousemove:', this.state.hoveredNode, this.state.selectedNode)
   }
 
   /**
@@ -497,6 +498,7 @@ export default class ReglGraph extends EventManager {
     }
     // Disponibilizando o evento na biblioteca
     this.emit('click', { event, node })
+    // console.log('click:', this.state.selectedNode)
   }
 
   /**
@@ -742,7 +744,7 @@ export default class ReglGraph extends EventManager {
       const [x, y] = this.searchIndex.points[idx]
       const d = this.distance(x, y, mouseX, mouseY)
       // O nó é redimensionado de acordo com o nível de zoom para melhorar a visualização
-      const minDist = (this.app.sizeIndex.get(idx) / 2) * (Math.exp(Math.log(this.state.transform[0]) * -0.5))
+      const minDist = (this.app.sizeIndex.get(idx) / 2) * (Math.exp(Math.log(this.state.transform[0]) * -0.25))
       if (d < minDist) {
         closestPoint = idx
       }
@@ -770,6 +772,7 @@ export default class ReglGraph extends EventManager {
    * Renderiza o grafo
    */
   render () {
+    // console.log('renderizando...', this.state.selectedNode)
     // Limpando o stage (transparente)
     this.app.regl.clear({
       color: [0, 0, 0, 0]
@@ -880,6 +883,7 @@ export default class ReglGraph extends EventManager {
         highlighted: false
       })
       if (drawSelectedCircle) {
+        // console.log('circle...', this.getSelectedNode())
         drawCircle(this.app.regl)({
           position: this.matrices.nodesPositions[this.getSelectedNode()],
           points: selectedCirclePoints,
@@ -891,7 +895,7 @@ export default class ReglGraph extends EventManager {
         })
       }
     }
-    // Plotando dos nós em destaque highlightedNodes
+    // Plotando os nós em destaque highlightedNodes
     if (this.state.highlightedNodes.length > 0) {
       const nodes = this.getHighlightedNodes()
       const hPositions = nodes.map(i => this.matrices.nodesPositions[i])
