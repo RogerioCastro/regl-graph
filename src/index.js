@@ -11,17 +11,17 @@ const container = document.createElement('div')
 container.id = 'graph-container'
 document.body.appendChild(container)
 
-json('/data/piraha.json').then((data) => {
+json('data.json').then((data) => {
   const graph = new reglGraph(container, data, {
-    defaultEdgesColor: '#FF0000',
+    defaultEdgesColor: '#00FF00',
     selectedCircleColor: '#FFFFFF',
-    defaultEdgesOpacity: 0.8,
+    defaultEdgesOpacity: 0.1,
     tooltipAttributes: ['size'],
-    nodesSizeRange: [3, 20],
+    nodesSizeRange: [5, 40],
     // edgesWeightRange: [1, 15],
     tooltipFormat: (node) => `${node.data.label}`
   })
-  console.log('Graph:', graph)
+  // console.log('Graph:', graph)
 })
 .catch((error) => {
   // eslint-disable-next-line no-console
