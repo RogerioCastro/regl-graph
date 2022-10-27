@@ -143,12 +143,7 @@ export const drawEdges = (regl) => {
         divisor: 1,
         offset: Float32Array.BYTES_PER_ELEMENT * 3,
         stride: Float32Array.BYTES_PER_ELEMENT * 6
-      },
-      // width: regl.prop("width")
-      /* width: {
-        buffer: regl.prop("width"),
-        divisor: 0
-      }, */
+      }
     },
 
     uniforms: {
@@ -161,6 +156,7 @@ export const drawEdges = (regl) => {
       color: regl.prop("color"),
       hovered: regl.prop('hovered'),
       selected: regl.prop('selected'),
+      highlighted: regl.prop('highlighted')
     },
 
     blend: {

@@ -1,6 +1,6 @@
 /**
  * @license
- * ReglGraph
+ * ReglGraph v1.1.0
  * Released under MIT license
  * Copyright Rogério Castro
  */
@@ -18,7 +18,7 @@ import { mat3, vec3} from 'gl-matrix'; // https://glmatrix.net/docs/
 import * as _get from 'lodash/get' // https://lodash.com/docs/
 import * as _has from 'lodash/has' // https://lodash.com/docs/
 import * as _set from 'lodash/set' // https://lodash.com/docs/
-import { drawPoints, drawEdges, drawCircle } from './commands'
+import { drawPoints, drawEdges } from './commands'
 import EventManager from './events'
 import createTooltip from './tooltip'
 import './style.scss'
@@ -82,9 +82,9 @@ export default class ReglGraph extends EventManager {
       edgesWeightRange: [1, 10],
       containerMargin: 0,
       zoomExtent: [1, 500],
-      drawSelectedCircle: true,
-      selectedCircleColor: '#dfff00',
-      selectedCirclePoints: 50,
+      highlightedNodeScale: 1.1,
+      selectedNodeBorderColor: 'rgb(255,255,255)',
+      selectedNodeBorderSize: 3,
       tooltipAttributes: [],
       tooltipFormat: this.tooltipDefaultFormat,
       log: true
@@ -109,18 +109,20 @@ export default class ReglGraph extends EventManager {
       projection: null,
       mousePosition: [0, 0],
       mouseDown: false,
+      dragging: false,
       hoveredNode: -1,
       hoverNeighbors: [],
       selectedNode: -1,
       selectedNeighbors: [],
-      highlightedNodes: [],
-      inAnimation: false
+      highlightedNodes: []
     }
     // Variável dos buffers
     this.buffers = {
       nodes: null,
       edges: new Map()
     }
+    // listener atrubuido aqui para possibilitar a remoção posterior
+    this._handleWindowResize = this.handleWindowResize.bind(this)
 
     /**
      * Juntando as configurações gerais com as opções informadas
@@ -132,6 +134,12 @@ export default class ReglGraph extends EventManager {
   }
 
   /**
+   * -------------------------------------------------------------------------------
+   * INITIALIZATIONS
+   * -------------------------------------------------------------------------------
+   */
+
+  /**
    * ----------------------------------------------------------------------
    * Iniciando a plotagem do grafo
    * @param {Object} data Dados da rede com nós (nodes) e arestas (edges)
@@ -140,7 +148,6 @@ export default class ReglGraph extends EventManager {
     // Iniciando os elementos HTML (criação do canvas)
     this.app.canvas = this.initCanvas()
     // Preenchendo dados relacionados ao canvas criado
-    this.app.canvas.id = this.app.canvasID = `graph-${this.uuid()}`
     this.app.width = this.app.canvas.clientWidth
     this.app.height = this.app.canvas.clientHeight
     this.state.projection = mat3.projection(mat3.create(), this.app.width, this.app.height)
@@ -165,13 +172,16 @@ export default class ReglGraph extends EventManager {
       .extent([[0, 0], [this.app.width, this.app.height]])
       .scaleExtent(this.getOption('zoomExtent'))
       .on("zoom", this.handleZoom.bind(this))
-      .on("end", this.handleMouseUp.bind(this))
+      .on("end", this.handleZoomEnd.bind(this))
 
     // Aplicando os tratamentos de eventos e funcionalidade de zoom ao canvas
+    // via: https://stackoverflow.com/a/22870717
+    window.addEventListener('resize', this._handleWindowResize, true)
     select(`#${this.app.canvasID}`)
-      .on('mousedown', this.handleMouseDown.bind(this))
-      .on('mousemove', this.handleMouseMove.bind(this))
-      .on('mouseout', this.handleNouseOut.bind(this))
+      .on('pointerdown', this.handleMouseDown.bind(this))
+      .on('pointermove', this.handleMouseMove.bind(this))
+      .on('pointerup', this.handleMouseUp.bind(this))
+      .on('pointerleave', this.handleMouseOut.bind(this))
       .on('click', this.handleClick.bind(this))
       .call(this.app.zoom)
       .on('dblclick.zoom', null)
@@ -201,7 +211,7 @@ export default class ReglGraph extends EventManager {
    */
   initCanvas () {
     const canvas = document.createElement('canvas')
-    // canvas.id = 'regl-graph-canvas'
+    canvas.id = this.app.canvasID = `graph-${this.uuid()}`
     this.container.appendChild(canvas)
     const containerMargin = this.getOption('containerMargin')
     canvas.width = this.container.clientWidth - containerMargin
@@ -363,32 +373,16 @@ export default class ReglGraph extends EventManager {
   }
 
   /**
-   * Atualiza o estado de posição e zoom do grafo
-   * @param {Number} x Deslocamento do palco no eixo X
-   * @param {Number} y Deslocamento do palco no eixo Y
-   * @param {Number} scale Escala do zoom
+   * -------------------------------------------------------------------------------
+   * EVENTS
+   * -------------------------------------------------------------------------------
    */
-  updateTransform (x, y, scale) {
-    mat3.identity(this.state.transform)
-    mat3.translate(this.state.transform, this.state.transform, [x, y])
-    mat3.scale(this.state.transform, this.state.transform, [scale, scale])
-    mat3.translate(this.state.transform, this.state.transform, [0, 0])
-    mat3.projection(this.state.projection, this.app.width, this.app.height)
-  }
 
   /**
-   * Retorna a posição x e y relativa do mouse (cursor)
-   * @param {Object} event Evento
-   * @returns {Number[]} Array com as posições do mouse [x, y]
+   * Manipula o evento de redimensionamento da janela do navegador.
    */
-  getRelativeMousePosition (event) {
-    const rect = event.target.getBoundingClientRect()
-    const mousePosition = []
-
-    mousePosition[0] = (event.clientX - rect.left) // devicePixelRatio
-    mousePosition[1] = (event.clientY - rect.top) // devicePixelRatio
-
-    return [...mousePosition]
+   handleWindowResize () {
+    // TODO: Implementar responsividade
   }
 
   /**
@@ -396,28 +390,23 @@ export default class ReglGraph extends EventManager {
    * @param {Object} event Evento
    */
   handleZoom (event) {
-    // settings.transform = e.transform
     const { x, y, k } = event.transform
     this.updateTransform(x, y, k)
-    // console.log('zoom:', this.state.transform)
-    this.render()
     // Disponibilizando o evento na biblioteca
     this.emit('zoom', event.transform)
-    if (this.state.mouseDown) {
+    if (this.state.dragging) {
       this.setCursorStyle('move')
-      // console.log('mousedown:', this.state.mouseDown)
     }
+    this.render()
   }
 
   /**
-   * Reseta zoom e pan aplicando uma transição leve
+   * Manipulando o evento end do zoom no grafo
+   * @param {Object} event Evento
    */
-  reset () {
-    this.state.inAnimation = true
-    select(`#${this.app.canvasID}`)
-      .transition()
-      .duration(750)
-      .call(this.app.zoom.transform, zoomIdentity)
+   handleZoomEnd (event) {
+    this.setCursorStyle('default')
+    this.render()
   }
 
   /**
@@ -426,7 +415,6 @@ export default class ReglGraph extends EventManager {
    */
   handleMouseDown (event) {
     this.state.mouseDown = true
-    // console.log('mousedown', this.state.hoveredNode)
   }
 
   /**
@@ -434,12 +422,16 @@ export default class ReglGraph extends EventManager {
    * @param {Object} event Evento
    */
   handleMouseUp (event) {
-    this.state.mouseDown = false
-    if (this.state.inAnimation) {
-      this.state.inAnimation = false
+    if (!this.state.dragging) {
+      this.highlight()
+      if (this.getHoveredNode() !== -1) {
+        this.setSelectedNode(this.getHoveredNode())
+      } else {
+        this.setSelectedNode()
+      }
     }
+    this.state.mouseDown = this.state.dragging = false
     this.render()
-    // console.log('mouseup', this.state.hoveredNode)
   }
 
   /**
@@ -452,31 +444,24 @@ export default class ReglGraph extends EventManager {
       const closestPoint = this.raycast()
       const format = this.getOption('tooltipFormat')
       if (closestPoint !== -1) {
-        /* // setHoverNeighbors deve sempre vir antes de setHoveredNode
-        if (closestPoint !== this.getHoveredNode()) {
-          this.setHoverNeighbors(closestPoint)
-          console.dir('Neighbors', getHoverNeighbors())
-        } */
         const node = this.getNodeByIndex(closestPoint)
         this.setHoveredNode(closestPoint)
         this.setCursorStyle('pointer')
         this.tooltip.show(node, format.bind(this))
-        // console.log('nó focus:', this.state.hoveredNode)
       } else {
-        /* // setHoverNeighbors deve sempre vir antes de setHoveredNode
-        this.setHoverNeighbors() */
         this.setHoveredNode()
         this.setCursorStyle('default')
         this.tooltip.hide()
       }
+    } else {
+      this.state.dragging = true
     }
-    // console.log('mousemove:', this.state.hoveredNode, this.state.selectedNode)
   }
 
   /**
    * Manipulando o evento mouseout no grafo
    */
-  handleNouseOut () {
+  handleMouseOut () {
     this.setHoveredNode()
     this.setCursorStyle('default')
     this.tooltip.hide()
@@ -487,18 +472,30 @@ export default class ReglGraph extends EventManager {
    * @param {Object} event Evento
    */
   handleClick (event) {
-    const closestPoint = this.raycast()
-    let node = null
     this.highlight()
-    if (closestPoint !== -1) {
-      this.setSelectedNode(closestPoint)
-      node = this.getNodeByIndex(closestPoint)
-    } else {
-      this.setSelectedNode()
-    }
+    let node = this.getSelectedNode() !== -1 ? this.getNodeByIndex(this.getSelectedNode()) : null
     // Disponibilizando o evento na biblioteca
     this.emit('click', { event, node })
-    // console.log('click:', this.state.selectedNode)
+  }
+
+  /**
+   * -------------------------------------------------------------------------------
+   * STATES
+   * -------------------------------------------------------------------------------
+   */
+
+  /**
+   * Atualiza o estado de posição e zoom do grafo
+   * @param {Number} x Deslocamento do palco no eixo X
+   * @param {Number} y Deslocamento do palco no eixo Y
+   * @param {Number} scale Escala do zoom
+   */
+  updateTransform (x, y, scale) {
+    mat3.identity(this.state.transform)
+    mat3.translate(this.state.transform, this.state.transform, [x, y])
+    mat3.scale(this.state.transform, this.state.transform, [scale, scale])
+    mat3.translate(this.state.transform, this.state.transform, [0, 0])
+    mat3.projection(this.state.projection, this.app.width, this.app.height)
   }
 
   /**
@@ -522,14 +519,6 @@ export default class ReglGraph extends EventManager {
   }
 
   /**
-   * Retorna o nó selecionado
-   * @returns Nó selecionado ou -1 para nenhum
-   */
-  getSelectedNode () {
-    return this.state.selectedNode
-  }
-
-  /**
    * Atribui os vizinhos do nó (ponto) selecionado
    * @param {Number[]} [index] Índice do nó selecionado
    */
@@ -543,34 +532,18 @@ export default class ReglGraph extends EventManager {
   }
 
   /**
-   * Retorna os vizinhos do nó selecionado ou [] para nenhum
-   * @returns Vizinhos do nó selecionado ou [] para nenhum
-   */
-  getSelectedNeighbors () {
-    return this.state.selectedNeighbors
-  }
-
-  /**
    * Atribui o nó (ponto) a ser realçado
    * @param {Number} idx Índice do nó a ser realçado
    */
   setHoveredNode (idx = -1) {
-    if (this.state.hoveredNode !== idx) {
+    if (this.getHoveredNode() !== idx) {
       // Atribuindo com 'this.set' porque há watcher para essa variável
       this.set('state.hoveredNode', idx)
       this.setHoverNeighbors(idx)
       this.render()
-    } else {
+    } else if (idx === -1) {
       this.setHoverNeighbors()
     }
-  }
-
-  /**
-   * Retorna o nó realçado ou -1 para nenhum
-   * @returns Nó realçado ou -1 para nenhum
-   */
-  getHoveredNode () {
-    return this.state.hoveredNode
   }
 
   /**
@@ -584,14 +557,6 @@ export default class ReglGraph extends EventManager {
     } else {
       this.state.hoverNeighbors = []
     }
-  }
-
-  /**
-   * Retorna os vizinhos do nó realçado ou [] para nenhum
-   * @returns Vizinhos do nó realçado ou [] para nenhum
-   */
-  getHoverNeighbors () {
-    return this.state.hoverNeighbors
   }
 
   /**
@@ -610,58 +575,25 @@ export default class ReglGraph extends EventManager {
     // console.info('highlightedNodes:', this.state.highlightedNodes)
   }
 
-  getHighlightedNodes () {
-    return this.state.highlightedNodes
-  }
+  /**
+   * -------------------------------------------------------------------------------
+   * RAYCASTER
+   * -------------------------------------------------------------------------------
+   */
 
   /**
-   * Atribui um estilo ao cursor (mouse)
-   * @param {String} value Tipo do cursor
+   * Retorna a posição x e y relativa do mouse (cursor)
+   * @param {Object} event Evento
+   * @returns {Number[]} Array com as posições do mouse [x, y]
    */
-  setCursorStyle (value) {
-    select(`#${this.app.canvasID}`).style('cursor', value)
-  }
+  getRelativeMousePosition (event) {
+    const rect = event.target.getBoundingClientRect()
+    const mousePosition = []
 
-  /**
-   * Função padrão de formatação do conteúdo das tooltips
-   * @param {Object} node Objeto com os dados do nó
-   */
-  tooltipDefaultFormat (node) {
-    const tooltipAttributes = this.getOption('tooltipAttributes')
-    // Verificando se há atributos a serem acrescentados na tooltip
-    if (tooltipAttributes.length) {
-      let content = `<strong>${node.data.label}</strong><hr>`
-      tooltipAttributes.forEach((attr) => {
-        content += `<div class="tooltip-attributes"> `
-        content += `<small>${attr}:</small> <strong>${node.data[attr]}</strong>`
-        content += `</div> `
-      })
-      return content
-    }
-    return `<strong>${node.data.label}</strong>`
-  }
+    mousePosition[0] = (event.clientX - rect.left) // devicePixelRatio
+    mousePosition[1] = (event.clientY - rect.top) // devicePixelRatio
 
-  /**
-   * Retorna o objeto do nó baseado em seu índice de leitura inicial
-   * @param {Number} index Índice do nó
-   * @returns Objeto ngraph do nó
-   */
-  getNodeByIndex (index) {
-    return this.app.graph.getNode(this.app.nodeIndex.get(index))
-  }
-
-  /**
-   * Retorna os nós lincados (vizinhos) do nó informado
-   * @param {String} nodeID ID do nó
-   * @param {Boolean} onlyIndex Indica se serão retornados apenas os índices dos nós
-   * @returns Array de nós lincados ou apenas seus índices
-   */
-  getNodeNeighbors (nodeID, onlyIndex = false) {
-    const nodes = []
-    this.app.graph.forEachLinkedNode(nodeID, (linkedNode) => {
-      nodes.push(onlyIndex ? linkedNode.data.index : linkedNode)
-    })
-    return nodes
+    return [...mousePosition]
   }
 
   /**
@@ -753,6 +685,100 @@ export default class ReglGraph extends EventManager {
   }
 
   /**
+   * -------------------------------------------------------------------------------
+   * HELPERS
+   * -------------------------------------------------------------------------------
+   */
+
+  /**
+   * Reseta zoom e pan aplicando uma transição leve
+   */
+  reset () {
+    select(`#${this.app.canvasID}`)
+      .transition()
+      .duration(750)
+      .call(this.app.zoom.transform, zoomIdentity)
+  }
+
+  /**
+   * Retorna o nó selecionado
+   * @returns Nó selecionado ou -1 para nenhum
+   */
+  getSelectedNode () {
+    return this.state.selectedNode
+  }
+
+  /**
+   * Retorna os vizinhos do nó selecionado ou [] para nenhum
+   * @returns Vizinhos do nó selecionado ou [] para nenhum
+   */
+  getSelectedNeighbors () {
+    return this.state.selectedNeighbors
+  }
+
+  /**
+   * Retorna o nó realçado ou -1 para nenhum
+   * @returns Nó realçado ou -1 para nenhum
+   */
+  getHoveredNode () {
+    return this.state.hoveredNode
+  }
+
+  /**
+   * Retorna os vizinhos do nó realçado ou [] para nenhum
+   * @returns Vizinhos do nó realçado ou [] para nenhum
+   */
+  getHoverNeighbors () {
+    return this.state.hoverNeighbors
+  }
+
+  getHighlightedNodes () {
+    return this.state.highlightedNodes
+  }
+
+  /**
+   * Função padrão de formatação do conteúdo das tooltips
+   * @param {Object} node Objeto com os dados do nó
+   */
+  tooltipDefaultFormat (node) {
+    const tooltipAttributes = this.getOption('tooltipAttributes')
+    // Verificando se há atributos a serem acrescentados na tooltip
+    if (tooltipAttributes.length) {
+      let content = `<strong>${node.data.label}</strong><hr>`
+      tooltipAttributes.forEach((attr) => {
+        content += `<div class="tooltip-attributes"> `
+        content += `<small>${attr}:</small> <strong>${node.data[attr]}</strong>`
+        content += `</div> `
+      })
+      return content
+    }
+    return `<strong>${node.data.label}</strong>`
+  }
+
+  /**
+   * Retorna o objeto do nó baseado em seu índice de leitura inicial
+   * @param {Number} index Índice do nó
+   * @returns Objeto ngraph do nó
+   */
+  getNodeByIndex (index) {
+    return this.app.graph.getNode(this.app.nodeIndex.get(index))
+  }
+
+  /**
+   * Retorna os nós lincados (vizinhos) do nó informado
+   * @param {String} nodeID ID do nó
+   * @param {Boolean} onlyIndex Indica se serão retornados apenas os índices dos nós
+   * @returns Array de nós lincados ou apenas seus índices
+   */
+  getNodeNeighbors (nodeID, onlyIndex = false) {
+    const nodes = []
+    this.app.graph.forEachLinkedNode(nodeID, (linkedNode) => {
+      nodes.push(onlyIndex ? linkedNode.data.index : linkedNode)
+    })
+    return nodes
+  }
+
+  /**
    * Cria os buffers para o grafo (nós e arestas)
    * @param {String} type tipo de buffer a ser criado: nodes | edges
    */
@@ -764,155 +790,6 @@ export default class ReglGraph extends EventManager {
     if (showEdges && (type === 'edges' || type === null)) {
       this.matrices.edgesPositionsByWeight.forEach((value, key) => {
         this.buffers.edges.set(key, this.app.regl.buffer(value))
-      })
-    }
-  }
-
-  /**
-   * Renderiza o grafo
-   */
-  render () {
-    // console.log('renderizando...', this.state.selectedNode)
-    // Limpando o stage (transparente)
-    this.app.regl.clear({
-      color: [0, 0, 0, 0]
-    })
-    // Configurações
-    const showEdgesOnMove = this.getOption('showEdgesOnMove')
-    const showEdgesOption = this.getOption('showEdges')
-    const defaultEdgesColor = this.getOption('defaultEdgesColor')
-    const defaultEdgesOpacity = this.getOption('defaultEdgesOpacity')
-    // Indetificando alguma restrição na exibição de arestas (configuração e ação de arastar grafo)
-    const noEdgesRestrictions = showEdgesOnMove ? true : !this.state.mouseDown
-    const showEdges = showEdgesOption || this.state.hoveredNode !== -1 || this.state.selectedNode !== -1
-    // Plotagem das arestas
-    if (showEdges && noEdgesRestrictions) {
-      this.buffers.edges.forEach((value, key) => {
-        drawEdges(this.app.regl)({
-          points: value,
-          width: Number(key),
-          color: this.glslColor(defaultEdgesColor, defaultEdgesOpacity),
-          stageWidth: this.app.width,
-          stageHeight: this.app.height,
-          transform: this.state.transform,
-          projection: this.state.projection,
-          zoom: this.state.transform[0],
-          segments: this.matrices.edgesPositionsByWeight.get(key).length / 2,
-          hovered: this.getHoveredNode(),
-          selected: this.getSelectedNode()
-        })
-      })
-    }
-    // Plotagem dos nós (pontos)
-    drawPoints(this.app.regl)({
-      nodes: this.buffers.nodes,
-      length: this.matrices.nodesPositions.length,
-      colors: this.matrices.nodeColors,
-      sizes: this.matrices.sizes,
-      stageWidth: this.app.width,
-      stageHeight: this.app.height,
-      transform: this.state.transform,
-      projection: this.state.projection,
-      zoom: this.state.transform[0],
-      hovered: this.getHoveredNode(),
-      selected: this.getSelectedNode(),
-      highlighted: this.state.highlightedNodes.length > 0
-    })
-    // Plotando o nó destacado e seus vizinhos, caso haja
-    if (this.state.hoveredNode !== -1) {
-      const neighbors = this.getHoverNeighbors()
-      const hPositions = [
-        this.matrices.nodesPositions[this.getHoveredNode()],
-        ...neighbors.map(i => this.matrices.nodesPositions[i])
-      ]
-      const hColors = [
-        // this.matrices.nodeColors[this.getHoveredNode()],
-        // ...neighbors.map(i => this.matrices.nodeColors[i])
-        [...this.matrices.nodeColors[this.getHoveredNode()].slice(0, 3), 1.0],
-        ...neighbors.map(i => [...this.matrices.nodeColors[i].slice(0, 3), 1.0])
-      ]
-      const hSizes = [
-        this.matrices.sizes[this.getHoveredNode()] * 1.1,
-        ...neighbors.map(i => this.matrices.sizes[i])
-      ]
-      drawPoints(this.app.regl)({
-        nodes: this.app.regl.buffer(hPositions),
-        length: hPositions.length,
-        colors: hColors,
-        sizes: hSizes,
-        stageWidth: this.app.width,
-        stageHeight: this.app.height,
-        transform: this.state.transform,
-        projection: this.state.projection,
-        zoom: this.state.transform[0],
-        hovered: -1,
-        highlighted: false
-      })
-    }
-    // Plotando o nó selecionado e seus vizinhos, caso haja
-    if (this.state.selectedNode !== -1) {
-      const neighbors = this.getSelectedNeighbors()
-      const drawSelectedCircle = this.getOption('drawSelectedCircle')
-      const selectedCirclePoints = this.getOption('selectedCirclePoints')
-      const selectedCircleColor = this.getOption('selectedCircleColor')
-      const hPositions = [
-        this.matrices.nodesPositions[this.getSelectedNode()],
-        ...neighbors.map(i => this.matrices.nodesPositions[i])
-      ]
-      const hColors = [
-        // this.matrices.nodeColors[this.getSelectedNode()],
-        // ...neighbors.map(i => this.matrices.nodeColors[i])
-        [...this.matrices.nodeColors[this.getSelectedNode()].slice(0, 3), 1.0],
-        ...neighbors.map(i => [...this.matrices.nodeColors[i].slice(0, 3), 1.0])
-      ]
-      const hSizes = [
-        this.matrices.sizes[this.getSelectedNode()] * 1.1,
-        ...neighbors.map(i => this.matrices.sizes[i])
-      ]
-      drawPoints(this.app.regl)({
-        nodes: this.app.regl.buffer(hPositions),
-        length: hPositions.length,
-        colors: hColors,
-        sizes: hSizes,
-        stageWidth: this.app.width,
-        stageHeight: this.app.height,
-        transform: this.state.transform,
-        projection: this.state.projection,
-        zoom: this.state.transform[0],
-        hovered: -1,
-        highlighted: false
-      })
-      if (drawSelectedCircle) {
-        // console.log('circle...', this.getSelectedNode())
-        drawCircle(this.app.regl)({
-          position: this.matrices.nodesPositions[this.getSelectedNode()],
-          points: selectedCirclePoints,
-          color: this.glslColor(selectedCircleColor, 1.0),
-          size: this.matrices.sizes[this.getSelectedNode()],
-          transform: this.state.transform,
-          projection: this.state.projection,
-          zoom: this.state.transform[0]
-        })
-      }
-    }
-    // Plotando os nós em destaque highlightedNodes
-    if (this.state.highlightedNodes.length > 0) {
-      const nodes = this.getHighlightedNodes()
-      const hPositions = nodes.map(i => this.matrices.nodesPositions[i])
-      const hColors = nodes.map(i => this.matrices.nodeColors[i])
-      const hSizes = nodes.map(i => this.matrices.sizes[i] * 1.1)
-      drawPoints(this.app.regl)({
-        nodes: this.app.regl.buffer(hPositions),
-        length: hPositions.length,
-        colors: hColors,
-        sizes: hSizes,
-        stageWidth: this.app.width,
-        stageHeight: this.app.height,
-        transform: this.state.transform,
-        projection: this.state.projection,
-        zoom: this.state.transform[0],
-        hovered: -1,
-        highlighted: false
       })
     }
   }
@@ -1013,6 +890,30 @@ export default class ReglGraph extends EventManager {
   }
 
   /**
+   * Limpando todos os objetos da memória.
+   */
+  dispose () {
+    window.removeEventListener('resize', this._handleWindowResize, true)
+    this.app.regl.destroy()
+    this.tooltip.destroy()
+    this.app.canvas.remove()
+  }
+
+  /**
+   * -------------------------------------------------------------------------------
+   * UTILS
+   * -------------------------------------------------------------------------------
+   */
+
+  /**
+   * Atribui um estilo ao cursor (mouse)
+   * @param {String} value Tipo do cursor
+   */
+  setCursorStyle (value) {
+    select(`#${this.app.canvasID}`).style('cursor', value)
+  }
+
+  /**
    * Distância L2 entre um par de pontos 2D
    * @param {Number} x1  coordenada X do primeiro ponto
    * @param {Number} y1  coordenada Y do primeiro ponto
@@ -1106,5 +1007,147 @@ export default class ReglGraph extends EventManager {
       g: parseInt(result[2], 16),
       b: parseInt(result[3], 16)
     } : null
+  }
+
+  /**
+   * -------------------------------------------------------------------------------
+   * RENDERING
+   * -------------------------------------------------------------------------------
+   */
+
+  /**
+   * Renderiza o grafo
+   */
+  render () {
+    // console.log('renderizando...', this.state.selectedNode)
+    // Limpando o stage (transparente)
+    this.app.regl.clear({
+      color: [0, 0, 0, 0]
+    })
+    // Configurações
+    const showEdgesOnMove = this.getOption('showEdgesOnMove')
+    const showEdgesOption = this.getOption('showEdges')
+    const defaultEdgesColor = this.getOption('defaultEdgesColor')
+    const defaultEdgesOpacity = this.getOption('defaultEdgesOpacity')
+    // Indetificando alguma restrição na exibição de arestas (configuração e ação de arastar grafo)
+    const noEdgesRestrictions = showEdgesOnMove ? true : !this.state.mouseDown
+    const showEdges = showEdgesOption || this.state.hoveredNode !== -1 || this.state.selectedNode !== -1
+    // Plotagem das arestas
+    if (showEdges && noEdgesRestrictions) {
+      this.buffers.edges.forEach((value, key) => {
+        drawEdges(this.app.regl)({
+          points: value,
+          width: Number(key),
+          color: this.glslColor(defaultEdgesColor, defaultEdgesOpacity),
+          stageWidth: this.app.width,
+          stageHeight: this.app.height,
+          transform: this.state.transform,
+          projection: this.state.projection,
+          zoom: this.state.transform[0],
+          segments: this.matrices.edgesPositionsByWeight.get(key).length / 2,
+          hovered: this.getHoveredNode(),
+          selected: this.getSelectedNode(),
+          highlighted: this.state.highlightedNodes.length > 0
+        })
+      })
+    }
+    // Plotagem dos nós (pontos)
+    drawPoints(this.app.regl)({
+      nodes: this.buffers.nodes,
+      length: this.matrices.nodesPositions.length,
+      colors: this.matrices.nodeColors,
+      sizes: this.matrices.sizes,
+      stageWidth: this.app.width,
+      stageHeight: this.app.height,
+      transform: this.state.transform,
+      projection: this.state.projection,
+      zoom: this.state.transform[0],
+      hovered: this.getHoveredNode(),
+      selected: this.getSelectedNode(),
+      highlighted: this.state.highlightedNodes.length > 0
+    })
+    // Plotando o nó destacado e seus vizinhos, caso haja
+    if (this.state.hoveredNode !== -1) {
+      const neighbors = this.getHoverNeighbors()
+      const hPositions = [
+        this.matrices.nodesPositions[this.getHoveredNode()],
+        ...neighbors.map(i => this.matrices.nodesPositions[i])
+      ]
+      const hColors = [
+        // this.matrices.nodeColors[this.getHoveredNode()],
+        // ...neighbors.map(i => this.matrices.nodeColors[i])
+        [...this.matrices.nodeColors[this.getHoveredNode()].slice(0, 3), 1.0],
+        ...neighbors.map(i => [...this.matrices.nodeColors[i].slice(0, 3), 1.0])
+      ]
+      const hSizes = [
+        this.matrices.sizes[this.getHoveredNode()] * 1.1,
+        ...neighbors.map(i => this.matrices.sizes[i])
+      ]
+      drawPoints(this.app.regl)({
+        nodes: this.app.regl.buffer(hPositions),
+        length: hPositions.length,
+        colors: hColors,
+        sizes: hSizes,
+        stageWidth: this.app.width,
+        stageHeight: this.app.height,
+        transform: this.state.transform,
+        projection: this.state.projection,
+        zoom: this.state.transform[0],
+        hovered: -1,
+        highlighted: false
+      })
+    }
+    // Plotando o nó selecionado e seus vizinhos, caso haja
+    if (this.state.selectedNode !== -1) {
+      const neighbors = this.getSelectedNeighbors()
+      const hPositions = [
+        ...neighbors.map(i => this.matrices.nodesPositions[i]),
+        this.matrices.nodesPositions[this.getSelectedNode()], // borda do nó selecionado
+        this.matrices.nodesPositions[this.getSelectedNode()]
+      ]
+      const hColors = [
+        ...neighbors.map(i => [...this.matrices.nodeColors[i].slice(0, 3), 1.0]),
+        this.glslColor(this.getOption('selectedNodeBorderColor'), 1.0), // borda do nó selecionado
+        [...this.matrices.nodeColors[this.getSelectedNode()].slice(0, 3), 1.0]
+      ]
+      const hSizes = [
+        ...neighbors.map(i => this.matrices.sizes[i]),
+        this.matrices.sizes[this.getSelectedNode()] * this.getOption('highlightedNodeScale') + this.getOption('selectedNodeBorderSize'), // borda do nó selecionado
+        this.matrices.sizes[this.getSelectedNode()] * this.getOption('highlightedNodeScale')
+      ]
+      drawPoints(this.app.regl)({
+        nodes: this.app.regl.buffer(hPositions),
+        length: hPositions.length,
+        colors: hColors,
+        sizes: hSizes,
+        stageWidth: this.app.width,
+        stageHeight: this.app.height,
+        transform: this.state.transform,
+        projection: this.state.projection,
+        zoom: this.state.transform[0],
+        hovered: -1,
+        highlighted: false
+      })
+    }
+    // Plotando os nós em destaque highlightedNodes
+    if (this.state.highlightedNodes.length > 0) {
+      const nodes = this.getHighlightedNodes()
+      const hPositions = nodes.map(i => this.matrices.nodesPositions[i])
+      const hColors = nodes.map(i => this.matrices.nodeColors[i])
+      const hSizes = nodes.map(i => this.matrices.sizes[i] * 1.1)
+      drawPoints(this.app.regl)({
+        nodes: this.app.regl.buffer(hPositions),
+        length: hPositions.length,
+        colors: hColors,
+        sizes: hSizes,
+        stageWidth: this.app.width,
+        stageHeight: this.app.height,
+        transform: this.state.transform,
+        projection: this.state.projection,
+        zoom: this.state.transform[0],
+        hovered: -1,
+        highlighted: false
+      })
+    }
   }
 }

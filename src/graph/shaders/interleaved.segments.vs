@@ -13,6 +13,7 @@ uniform float width;
 uniform float hovered;
 uniform float selected;
 uniform vec4 color;
+uniform bool highlighted;
 
 varying vec4 edgeColor;
 
@@ -26,6 +27,7 @@ void main() {
   vec2 point = xyPointA + xBasis * position.x + yBasis * size * position.y;
   vec3 final = projection * transform * vec3(point, 1);
   gl_Position = vec4(final.xy, 0, 1);
+  if (highlighted) edgeColor.a = 0.2;
   if (selected != -1.0 && pointA.z != selected && pointB.z != selected) edgeColor.a = 0.0;
   if (hovered != -1.0 && pointA.z != hovered && pointB.z != hovered) edgeColor.a = 0.0;
   if (pointA.z == hovered || pointB.z == hovered) edgeColor.a = 1.0;

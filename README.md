@@ -106,9 +106,9 @@ A instância criada com `new reglGraph(container, data, options)` pode ser utili
 | `defaultEdgesColor` | Cor padrão (formato CSS) para plotagem das arestas em caso de não haver a propriedade `color` especificada no objeto da aresta. Valor padrão: `'#FFFFFF'`. |
 | `containerMargin` | Margem a ser aplicada ao container HTML. Valor padrão: `0`. |
 | `zoomExtent` | Extensão de valores mínimo e máximo para o nível de zoom. Valor padrão: `[1, 500]`. |
-| `drawSelectedCircle` | Habilita ou desabilita a plotagem de um círculo em volta do nó selecionado. Valor padrão: `true`. |
-| `selectedCircleColor` | Cor (formato CSS) do círculo em volta do nó selecionado. Valor padrão: `'#dfff00'`. |
-| `selectedCirclePoints` | Número de pontos utilizados para plotagem do círculo em volta do nó selecionado. Valor padrão: `30`. |
+| `highlightedNodeScale` | Escala de tamanho a ser aplicada no nó realçado (sobreposto pelo mouse). Valor padrão: `1.1`. |
+| `selectedNodeBorderColor` | Cor da borda do nó selecionado. Valor padrão: `'rgb(255,255,255)'`. |
+| `selectedNodeBorderSize` | Espessura da borda do nó selecionado. Valor padrão: `3`. |
 | `tooltipAttributes` | *Array* com os nomes de atributos dos nós que devem ser exibidos nas *tooltips*. Essa propriedade será descartada se `tooltipFormat` for informado. Valor padrão: `[]`. |
 | `tooltipFormat` | Função de formatação do conteúdo da *tooltip*. Essa função receberá um objeto com os dados do nó e deve retornar uma *string* que pode conter HTML `(node) => 'content'`. Se essa propriedade não for informada, a formatação padrão da biblioteca será utilizada e a opção `tooltipAttributes` será considerada. |
 | `log` | Habilita ou desabilita a exibição de *logs* da biblioteca no *console* do navegador. Valor padrão: `true`. |
@@ -129,7 +129,7 @@ Os *event listeners* são atribuídos por meio da instância, com a função `on
 | Evento | Descrição |
 | ------ | --------- |
 | `nodeselect` | Evento disparado quando um nó é selecionado. Recebe como argumento um objeto com os dados do nó selecionado. Ex.: `graph.on('nodeselect', (node) => {})` |
-| `click` | Evento disparado em qualquer clique na área do grafo. Recebe como argumento um objeto com evento e o nó, quando o clique for sobre um nó. Ex.: `graph.on('click', ({ event, node }) => {})` |
+| `click` | Evento disparado em qualquer clique na área do grafo. Recebe como argumento um objeto com evento e o nó, quando o clique for sobre um nó, caso contrário recebe um valor nulo como nó. Ex.: `graph.on('click', ({ event, node }) => {})` |
 | `nodeover` | Evento disparado quando um nó é sobreposicionado pelo mouse. Recebe como argumento um objeto com os dados do nó. Ex.: `graph.on('nodeover', (node) => {})` |
 | `nodeout` | Evento disparado quando um nó é deixado pelo mouse. Recebe como argumento um objeto com os dados do nó. Ex.: `graph.on('nodeout', (node) => {})` |
 | `zoom` | Evento disparado quando o grafo é movido ou o nível de zoom é alterado. Recebe como argumento um objeto com os dados da transformação. Ex.: `graph.on('zoom', ({ x, y, z }) => {})` |
