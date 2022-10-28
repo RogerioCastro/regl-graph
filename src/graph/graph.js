@@ -145,6 +145,7 @@ export default class ReglGraph extends EventManager {
    * @param {Object} data Dados da rede com nós (nodes) e arestas (edges)
    */
   init (data) {
+    this.container.style.position = 'relative'
     // Iniciando os elementos HTML (criação do canvas)
     this.app.canvas = this.initCanvas()
     // Preenchendo dados relacionados ao canvas criado
@@ -212,6 +213,9 @@ export default class ReglGraph extends EventManager {
   initCanvas () {
     const canvas = document.createElement('canvas')
     canvas.id = this.app.canvasID = `graph-${this.uuid()}`
+    canvas.style.position = 'absolute'
+    canvas.style.left = 0
+    canvas.style.top = 0
     this.container.appendChild(canvas)
     const containerMargin = this.getOption('containerMargin')
     canvas.width = this.container.clientWidth - containerMargin

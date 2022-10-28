@@ -18,8 +18,7 @@ fetch('data.json')
       selectedCircleColor: '#FFFFFF',
       defaultEdgesOpacity: 0.1,
       tooltipAttributes: ['size'],
-      nodesSizeRange: [5, 40],
-      // tooltipFormat: (node) => `${node.data.label}`
+      nodesSizeRange: [5, 40]
     })
     // console.log('Graph:', graph)
   })
