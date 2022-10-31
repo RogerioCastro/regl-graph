@@ -705,7 +705,7 @@ export default class ReglGraph extends EventManager {
   }
 
   /**
-   * Retorna o nó selecionado
+   * Retorna o índice do nó selecionado
    * @returns Nó selecionado ou -1 para nenhum
    */
   getSelectedNode () {
@@ -713,7 +713,7 @@ export default class ReglGraph extends EventManager {
   }
 
   /**
-   * Retorna os vizinhos do nó selecionado ou [] para nenhum
+   * Retorna os índices dos vizinhos do nó selecionado ou [] para nenhum
    * @returns Vizinhos do nó selecionado ou [] para nenhum
    */
   getSelectedNeighbors () {
@@ -721,7 +721,7 @@ export default class ReglGraph extends EventManager {
   }
 
   /**
-   * Retorna o nó realçado ou -1 para nenhum
+   * Retorna o índice do nó realçado ou -1 para nenhum
    * @returns Nó realçado ou -1 para nenhum
    */
   getHoveredNode () {
@@ -729,13 +729,17 @@ export default class ReglGraph extends EventManager {
   }
 
   /**
-   * Retorna os vizinhos do nó realçado ou [] para nenhum
+   * Retorna os índices dos vizinhos do nó realçado ou [] para nenhum
    * @returns Vizinhos do nó realçado ou [] para nenhum
    */
   getHoverNeighbors () {
     return this.state.hoverNeighbors
   }
 
+  /**
+   * Retorna os índices dos nós destacados ou [] para nenhum
+   * @returns Nós destacados ou [] para nenhum
+   */
   getHighlightedNodes () {
     return this.state.highlightedNodes
   }
@@ -769,7 +773,7 @@ export default class ReglGraph extends EventManager {
   }
 
   /**
-   * Retorna os nós lincados (vizinhos) do nó informado
+   * Retorna os nós lincados (vizinhos) ao nó informado
    * @param {String} nodeID ID do nó
    * @param {Boolean} onlyIndex Indica se serão retornados apenas os índices dos nós
    * @returns Array de nós lincados ou apenas seus índices
