@@ -177,13 +177,22 @@ O objeto do nó fornecido como argumento nos eventos e na função de formataç�
 ```javascript
 const graph = new reglGraph(container, data, options);
 
+/* Reseta zoom e pan aplicando uma transição leve, retomando o estado de visualização inicial */
+graph.reset();
+
 /* 'getOption' Retorna as configurações da biblioteca ou todas se nada for informado como argumento */
 const defaultEdgesColor = graph.getOption('defaultEdgesColor');
 const allOptions = graph.getOption();
 
+/* Atribui ou modifica uma configuração do grafo e chama a renderização */
+graph.setOption('defaultEdgesColor', '#FF0000')
+
+/* Deleta o grafo e limpa os objetos da memória */
+graph.dispose()
+
 /* 'getAppInstance' Retorna algumas instâncias importantes da biblioteca */
 
-// Instância o objeto regl (https://github.com/regl-project/regl)
+// Instância do objeto regl (https://github.com/regl-project/regl)
 const regl = graph.getAppInstance('regl');
 
 // Instância do modelo do grafo (https://github.com/anvaka/ngraph.graph)
@@ -191,6 +200,9 @@ const graphModel = graph.getAppInstance('graph');
 
 // Instância da tooltip (https://github.com/atomiks/tippyjs)
 const tooltip = graph.getAppInstance('tooltip');
+
+// Elemento canvas
+const canvas = graph.getAppInstance('canvas');
 ```
 
 ## Desenvolvimento
