@@ -190,6 +190,9 @@ graph.setOption('defaultEdgesColor', '#FF0000')
 /* Deleta o grafo e limpa os objetos da memória */
 graph.dispose()
 
+/* Destaca nós de uma lista de IDs */
+graph.highlight(['underscore', 'async'])
+
 /* 'getAppInstance' Retorna algumas instâncias importantes da biblioteca */
 
 // Instância do objeto regl (https://github.com/regl-project/regl)
