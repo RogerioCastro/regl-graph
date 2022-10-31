@@ -156,7 +156,8 @@ export const drawEdges = (regl) => {
       color: regl.prop("color"),
       hovered: regl.prop('hovered'),
       selected: regl.prop('selected'),
-      highlighted: regl.prop('highlighted')
+      highlighted: regl.prop('highlighted'),
+      opacity: regl.prop('opacity')
     },
 
     blend: {

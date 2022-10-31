@@ -78,6 +78,7 @@ export default class ReglGraph extends EventManager {
       nodesSizeRange: [5, 30],
       defaultNodesOpacity: 1,
       defaultEdgesOpacity: 0.05,
+      EdgesOpacityOnHighlight: 0.1,
       defaultEdgesColor: '#FFFFFF',
       edgesWeightRange: [1, 10],
       containerMargin: 0,
@@ -1037,6 +1038,7 @@ export default class ReglGraph extends EventManager {
     const showEdgesOption = this.getOption('showEdges')
     const defaultEdgesColor = this.getOption('defaultEdgesColor')
     const defaultEdgesOpacity = this.getOption('defaultEdgesOpacity')
+    const EdgesOpacityOnHighlight = this.getOption('EdgesOpacityOnHighlight')
     // Indetificando alguma restrição na exibição de arestas (configuração e ação de arastar grafo)
     const noEdgesRestrictions = showEdgesOnMove ? true : !this.state.mouseDown
     const showEdges = showEdgesOption || this.state.hoveredNode !== -1 || this.state.selectedNode !== -1
@@ -1055,7 +1057,8 @@ export default class ReglGraph extends EventManager {
           segments: this.matrices.edgesPositionsByWeight.get(key).length / 2,
           hovered: this.getHoveredNode(),
           selected: this.getSelectedNode(),
-          highlighted: this.state.highlightedNodes.length > 0
+          highlighted: this.state.highlightedNodes.length > 0,
+          opacity: EdgesOpacityOnHighlight
         })
       })
     }

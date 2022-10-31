@@ -103,6 +103,7 @@ A instância criada com `new reglGraph(container, data, options)` pode ser utili
 | `edgesWeightRange` | Extensão de valores mínimo e máximo para a espessura das arestas. Valor padrão: `[1, 5]`. |
 | `defaultNodesOpacity` | Opacidade padrão para plotagem dos nós. Valor padrão: `1`. |
 | `defaultEdgesOpacity` | Opacidade padrão para plotagem das arestas. Valor padrão: `0.05`. |
+| `EdgesOpacityOnHighlight` | Opacidade padrão para plotagem das arestas quando há nós destacados. Valor padrão: `0.1`. |
 | `defaultEdgesColor` | Cor padrão (formato CSS) para plotagem das arestas em caso de não haver a propriedade `color` especificada no objeto da aresta. Valor padrão: `'#FFFFFF'`. |
 | `containerMargin` | Margem a ser aplicada ao container HTML. Valor padrão: `0`. |
 | `zoomExtent` | Extensão de valores mínimo e máximo para o nível de zoom. Valor padrão: `[1, 500]`. |
