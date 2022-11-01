@@ -14,6 +14,7 @@ import {
   zoom as d3Zoom,
   zoomIdentity
 } from 'd3' // https://github.com/d3/d3
+import Transform from './transform'
 import { mat3, vec3} from 'gl-matrix'; // https://glmatrix.net/docs/
 import * as _get from 'lodash/get' // https://lodash.com/docs/
 import * as _has from 'lodash/has' // https://lodash.com/docs/
@@ -83,6 +84,8 @@ export default class ReglGraph extends EventManager {
       edgesWeightRange: [1, 10],
       containerMargin: 0,
       zoomExtent: [1, 500],
+      zoomLevelFocus: 10,
+      highlightOnFocus: true,
       highlightedNodeScale: 1.1,
       selectedNodeBorderColor: 'rgb(255,255,255)',
       selectedNodeBorderSize: 3,
@@ -703,6 +706,29 @@ export default class ReglGraph extends EventManager {
       .transition()
       .duration(750)
       .call(this.app.zoom.transform, zoomIdentity)
+  }
+
+  /**
+   * Foca em um nó por meio de uma animação
+   * @param {String|Number} nodeId Identificador do nó no grafo
+   * @param {Number} level Nível de zoom para foco no nó. Default: 'zoomLevelFocus'
+   */
+  focusNode (nodeId, level = null) {
+    const node = this.app.graph.getNode(nodeId)
+    if (node) {
+      const k = level ?? this.getOption('zoomLevelFocus')
+      const x = (this.app.width / 2 - node.data.position[0] * k)
+      const y = (this.app.height / 2 - node.data.position[1] * k)
+      select(`#${this.app.canvasID}`)
+        .transition()
+        .duration(750)
+        .call(this.app.zoom.transform, new Transform(k, x, y))
+        .on('end', () => {
+          if (this.getOption('highlightOnFocus')) {
+            this.highlight([nodeId])
+          }
+        })
+    }
   }
 
   /**

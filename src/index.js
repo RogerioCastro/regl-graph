@@ -13,14 +13,14 @@ document.body.appendChild(container)
 fetch('data.json')
   .then((response) => response.json())
   .then((data) => {
-    const graph = new reglGraph(container, data, {
+    // 'graph' ficará disponível via console para testes
+    window.graph = new reglGraph(container, data, {
       defaultEdgesColor: '#00FF00',
       selectedCircleColor: '#FFFFFF',
       defaultEdgesOpacity: 0.1,
       tooltipAttributes: ['size'],
       nodesSizeRange: [5, 40]
     })
-    // console.log('Graph:', graph)
   })
   .catch((error) => {
     // eslint-disable-next-line no-console

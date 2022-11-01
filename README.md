@@ -107,6 +107,8 @@ A instância criada com `new reglGraph(container, data, options)` pode ser utili
 | `defaultEdgesColor` | Cor padrão (formato CSS) para plotagem das arestas em caso de não haver a propriedade `color` especificada no objeto da aresta. Valor padrão: `'#FFFFFF'`. |
 | `containerMargin` | Margem a ser aplicada ao container HTML. Valor padrão: `0`. |
 | `zoomExtent` | Extensão de valores mínimo e máximo para o nível de zoom. Valor padrão: `[1, 500]`. |
+| `zoomLevelFocus` | Nível de zoom ao utilizar o método de foco em um nó. Valor padrão: `10`. |
+| `highlightOnFocus` | Destacar ou não o nó ao utilizar o método de foco em um nó. Valor padrão: `true`. |
 | `highlightedNodeScale` | Escala de tamanho a ser aplicada no nó realçado (sobreposto pelo mouse). Valor padrão: `1.1`. |
 | `selectedNodeBorderColor` | Cor da borda do nó selecionado. Valor padrão: `'rgb(255,255,255)'`. |
 | `selectedNodeBorderSize` | Espessura da borda do nó selecionado. Valor padrão: `3`. |
@@ -193,6 +195,9 @@ graph.dispose()
 
 /* Destaca nós de uma lista de IDs */
 graph.highlight(['underscore', 'async'])
+
+/* Executa uma animação e foca em um nó específico */
+graph.focusNode('optimist')
 
 /* 'getAppInstance' Retorna algumas instâncias importantes da biblioteca */
 
