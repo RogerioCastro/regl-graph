@@ -120,6 +120,21 @@ export default class ReglGraph extends EventManager {
       selectedNeighbors: [],
       highlightedNodes: []
     }
+    // Variável das escalas e medidas
+    this.measure = {
+      extents: {
+        size: [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY],
+        x: [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY],
+        y: [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY],
+        weight: [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]
+      },
+      scales: {
+        size: null,
+        x: null,
+        y: null,
+        weight: null,
+      }
+    }
     // Variável dos buffers
     this.buffers = {
       nodes: null,
@@ -254,76 +269,70 @@ export default class ReglGraph extends EventManager {
     const defaultEdgesColor = this.getOption('defaultEdgesColor')
 
     // Obtendo todas as extensões em uma única iteração
-    const extents = {
-      size: [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY],
-      x: [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY],
-      y: [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY],
-      weight: [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]
-    }
     // Verificando se existe a propriedade size nas arestas
     if (showEdges) {
       if (typeof edges[0].size !== 'undefined' || typeof edges[0].weight !== 'undefined') {
         const weightName = edges[0].size ? 'size' : 'weight'
-        extents.weight = d3Extent(edges.map(e => e[weightName]))
+        this.measure.extents.weight = d3Extent(edges.map(e => e[weightName]))
       } else {
-        extents.weight = [0, 1]
+        this.measure.extents.weight = [0, 1]
       }
     }
     nodes.forEach((node) => {
-      if (node.size < extents.size[0]) {
-        extents.size[0] = node.size
+      if (node.size < this.measure.extents.size[0]) {
+        this.measure.extents.size[0] = node.size
       }
-      if (node.size > extents.size[1]) {
-        extents.size[1] = node.size
+      if (node.size > this.measure.extents.size[1]) {
+        this.measure.extents.size[1] = node.size
       }
       const x = node.x ? node.x : node.position.x
-      if (x < extents.x[0]) {
-        extents.x[0] = x
+      if (x < this.measure.extents.x[0]) {
+        this.measure.extents.x[0] = x
       }
-      if (x > extents.x[1]) {
-        extents.x[1] = x
+      if (x > this.measure.extents.x[1]) {
+        this.measure.extents.x[1] = x
       }
       const y = node.y ? node.y : node.position.y
-      if (y < extents.y[0]) {
-        extents.y[0] = y
+      if (y < this.measure.extents.y[0]) {
+        this.measure.extents.y[0] = y
       }
-      if (y > extents.y[1]) {
-        extents.y[1] = y
+      if (y > this.measure.extents.y[1]) {
+        this.measure.extents.y[1] = y
       }
     })
 
     // Pegando os acréscimos de margem da plotagem para enquadrar a rede na tela sem deformar o layout
-    const { marginXIncrease, marginYIncrease } = this.layoutAspectRatio(extents.x, extents.y)
+    const { marginXIncrease, marginYIncrease } = this.layoutAspectRatio(this.measure.extents.x, this.measure.extents.y)
 
     // Escalas
-    const scales = {
-      size: scaleLinear()
-        .domain(extents.size)
-        .range(nodesSizeRange),
-      x: scaleLinear()
-        .domain(extents.x)
-        .range([graphMargin + marginXIncrease, this.app.width - graphMargin - marginXIncrease]),
-      y: scaleLinear()
-        .domain(extents.y)
-        .range([graphMargin + marginYIncrease, this.app.height - graphMargin - marginYIncrease]),
-      weight: scaleLinear()
-        .domain(extents.weight)
-        .rangeRound(extents.weight[0] === extents.weight[1] ? [1, 1] : edgesWeightRange)
-    }
+    this.measure.scales.size = scaleLinear()
+      .domain(this.measure.extents.size)
+      .range(nodesSizeRange),
+    this.measure.scales.x = scaleLinear()
+      .domain(this.measure.extents.x)
+      .range([graphMargin + marginXIncrease, this.app.width - graphMargin - marginXIncrease]),
+    this.measure.scales.y = scaleLinear()
+      .domain(this.measure.extents.y)
+      .range([graphMargin + marginYIncrease, this.app.height - graphMargin - marginYIncrease]),
+    this.measure.scales.weight = scaleLinear()
+      .domain(this.measure.extents.weight)
+      .rangeRound(this.measure.extents.weight[0] === this.measure.extents.weight[1] ? [1, 1] : edgesWeightRange)
 
     // Nós
     nodes.forEach((node, i) => {
       const x = node.x ? node.x : node.position.x
       const y = node.y ? node.y : node.position.y
-      const position = [scales.x(x), scales.y(y), i]
-      const size = scales.size(node.size)
+      const position = [this.measure.scales.x(x), this.measure.scales.y(y), i]
+      const size = this.measure.scales.size(node.size)
       // Adicionando o nó no modelo de grafo
       this.app.graph.addNode(node.id, {
         color: node.color,
+        originalColor: node.color,
         label: node.label,
+        originalSize: node.size,
+        index: i,
         y,
         x,
-        index: i,
         position,
         size,
         ...(node.attributes ? node.attributes : {})
@@ -340,7 +349,7 @@ export default class ReglGraph extends EventManager {
     // Arestas
     if (showEdges) {
       edges.forEach((edge, i) => {
-        const weight = typeof edge.size !== 'undefined' ? scales.weight(edge.size) : typeof edge.weight !== 'undefined' ? scales.weight(edge.weight) : 1
+        const weight = typeof edge.size !== 'undefined' ? this.measure.scales.weight(edge.size) : typeof edge.weight !== 'undefined' ? this.measure.scales.weight(edge.weight) : 1
         const color = typeof edge.color !== 'undefined' ? edge.color : defaultEdgesColor
         this.app.graph.addLink(edge.sourceID || edge.source, edge.targetID || edge.target, {
           weight,
@@ -932,6 +941,32 @@ export default class ReglGraph extends EventManager {
     this.app.regl.destroy()
     this.tooltip.destroy()
     this.app.canvas.remove()
+  }
+
+  /**
+   * Redimensionando os nós do grafo
+   * @param {Number[]} range Array como os tamanhos mínimo e máximo para os nós
+   */
+  resizeNodes (range) {
+    if (range) {
+      this.setOption('nodesSizeRange', range)
+    }
+    const nodesSizeRange = this.getOption('nodesSizeRange')
+
+    // Escalas
+    this.measure.scales.size = scaleLinear()
+      .domain(this.measure.extents.size)
+      .range(nodesSizeRange)
+
+    // this.matrices.sizes = []
+    this.app.graph.forEachNode((node) => {
+      const size = this.measure.scales.size(node.data.originalSize)
+      node.data.size = size
+      this.matrices.sizes[node.data.index] = size
+      this.app.sizeIndex.set(node.data.index, size)
+    })
+    this.loadBuffers('nodes')
+    this.render()
   }
 
   /**

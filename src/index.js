@@ -28,6 +28,14 @@ fetch('data.json')
     console.error('Erro na leitura dos dados JSON:', error)
   })
 
+function debounce (fn, ms = 0) {
+  let timeoutId
+  return (...args) => {
+    clearTimeout(timeoutId)
+    timeoutId = setTimeout(() => fn.apply(this, args), ms)
+  }
+}
+
 /* GUI */
 function loadGUI(graph) {
   const settings = {
@@ -35,6 +43,10 @@ function loadGUI(graph) {
     showEdgesOnMove: graph.getOption('showEdgesOnMove'),
     defaultEdgesOpacity: graph.getOption('defaultEdgesOpacity'),
     defaultEdgesColor: graph.getOption('defaultEdgesColor'),
+    selectedNodeBorderColor: graph.getOption('selectedNodeBorderColor'),
+    selectedNodeBorderSize: graph.getOption('selectedNodeBorderSize'),
+    minNodeSize: graph.getOption('nodesSizeRange')[0],
+    maxNodeSize: graph.getOption('nodesSizeRange')[1],
     highlight: () => {
       graph.highlight(['underscore', 'async'])
     },
@@ -73,6 +85,30 @@ function loadGUI(graph) {
     .name('Edges color')
     .onChange(e => {
       graph.setOption('defaultEdgesColor', e)
+    })
+  render
+    .addColor(settings, 'selectedNodeBorderColor')
+    .name('Selected color')
+    .onChange(e => {
+      graph.setOption('selectedNodeBorderColor', e)
+    })
+  render
+    .add(settings, 'selectedNodeBorderSize', 1, 10, 1)
+    .name('Selected border')
+    .onChange(e => {
+      debounce.call(graph, graph.setOption, 500)('selectedNodeBorderSize', e)
+    })
+  render
+    .add(settings, 'minNodeSize', 3, 30, 1)
+    .name('Node size (min)')
+    .onChange(e => {
+      debounce.call(graph, graph.resizeNodes, 500)([e, graph.getOption('nodesSizeRange')[1]])
+    })
+  render
+    .add(settings, 'maxNodeSize', 30, 100, 1)
+    .name('Node size (max)')
+    .onChange(e => {
+      debounce.call(graph, graph.resizeNodes, 500)([graph.getOption('nodesSizeRange')[0], e])
     })
   render
     .add(settings, 'highlight')

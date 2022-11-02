@@ -199,6 +199,9 @@ graph.highlight(['underscore', 'async'])
 /* Executa uma animação e foca em um nó específico */
 graph.focusNode('optimist')
 
+/* Redimensiona os nós de acordo com os tamanhos mínimo e máximo fornecidos [min, max] */
+graph.resizeNodes([10, 60])
+
 /* 'getAppInstance' Retorna algumas instâncias importantes da biblioteca */
 
 // Instância do objeto regl (https://github.com/regl-project/regl)
