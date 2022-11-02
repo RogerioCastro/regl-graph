@@ -23,23 +23,9 @@ module.exports = {
   plugins: [
     new HtmlWebpackPlugin({
       title: 'Regl Graph',
+      minify: false
     }),
   ],
-  /* output: {
-    filename: '[name].min.js',
-    path: path.resolve(__dirname, 'dist'),
-    library: {
-      name: 'ReglGraph',
-      type: 'umd',
-      export: 'default'
-    },
-    clean: false
-  }, */
-  /* optimization: {
-    splitChunks: {
-      chunks: 'all',
-    },
-  }, */
   module: {
     rules: [
       {
