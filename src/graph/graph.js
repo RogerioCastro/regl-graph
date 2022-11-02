@@ -330,12 +330,12 @@ export default class ReglGraph extends EventManager {
         originalColor: node.color,
         label: node.label,
         originalSize: node.size,
+        attributes: this.isNil(node.attributes) ? null : node.attributes,
         index: i,
         y,
         x,
         position,
-        size,
-        ...(node.attributes ? node.attributes : {})
+        size
       })
       // Alimentando o índice de nós
       this.app.nodeIndex.set(i, node.id)
@@ -355,7 +355,7 @@ export default class ReglGraph extends EventManager {
           weight,
           color,
           index: i,
-          ...(edge.attributes ? edge.attributes : {})
+          attributes: this.isNil(edge.attributes) ? null : edge.attributes
         });
         // Preenchendo os arrays para os shaders
         const source = this.app.graph.getNode(edge.sourceID || edge.source)
@@ -1077,6 +1077,18 @@ export default class ReglGraph extends EventManager {
       g: parseInt(result[2], 16),
       b: parseInt(result[3], 16)
     } : null
+  }
+
+  /**
+   * Checa se uma variável qualquer está totalmente vazia
+   * @param val Variável a ser checada
+   * @returns {Boolean}
+   */
+  isNil (val) {
+    return val === undefined
+      || val === null
+      || (typeof val === 'object' && Object.keys(val).length === 0)
+      || (typeof val === 'string' && val.trim() === '')
   }
 
   /**
