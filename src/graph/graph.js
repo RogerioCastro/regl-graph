@@ -22,6 +22,7 @@ import * as _set from 'lodash/set' // https://lodash.com/docs/
 import { drawPoints, drawEdges } from './commands'
 import EventManager from './events'
 import createTooltip from './tooltip'
+import palette from './colors'
 import './style.scss'
 
 /**
@@ -71,6 +72,8 @@ export default class ReglGraph extends EventManager {
     this.scaleRGBToVec4 = scaleLinear()
       .domain([0, 255])
       .range([0, 1])
+    // Cache para partições de cores
+    this.colorMap = {}
     // Configurações gerais
     this.settings = {
       graphMargin: 50,
@@ -78,6 +81,8 @@ export default class ReglGraph extends EventManager {
       showEdgesOnMove: false,
       nodesSizeRange: [5, 30],
       defaultNodesOpacity: 1,
+      DefaultNodeColor: '#0000FF',
+      colorByAttribute: null,
       defaultEdgesOpacity: 0.05,
       EdgesOpacityOnHighlight: 0.1,
       defaultEdgesColor: '#FFFFFF',
@@ -118,7 +123,8 @@ export default class ReglGraph extends EventManager {
       hoverNeighbors: [],
       selectedNode: -1,
       selectedNeighbors: [],
-      highlightedNodes: []
+      highlightedNodes: [],
+      currentColorAttribute: null
     }
     // Variável das escalas e medidas
     this.measure = {
@@ -260,6 +266,13 @@ export default class ReglGraph extends EventManager {
       sizes: []
     }
 
+    // Cores
+    let colorMapIndex = 0
+    if (this.settings.colorByAttribute) {
+      this.colorMap[this.settings.colorByAttribute] = new Map()
+      this.state.currentColorAttribute = this.settings.colorByAttribute
+    }
+
     // Configurações
     const nodesSizeRange = this.getOption('nodesSizeRange')
     const graphMargin = this.getOption('graphMargin')
@@ -324,14 +337,23 @@ export default class ReglGraph extends EventManager {
       const y = node.y ? node.y : node.position.y
       const position = [this.measure.scales.x(x), this.measure.scales.y(y), i]
       const size = this.measure.scales.size(node.size)
+      let color = node.color ?? node?.attributes?.color ?? this.settings.DefaultNodeColor
+      // Cor, se for o caso
+      if (this.settings.colorByAttribute) {
+        color = this.colorMap[this.settings.colorByAttribute].get(node.attributes[this.settings.colorByAttribute])
+        if (!color) {
+          color = palette[colorMapIndex++] ?? this.randomColor()
+          this.colorMap[this.settings.colorByAttribute].set(node.attributes[this.settings.colorByAttribute], color)
+        }
+      }
       // Adicionando o nó no modelo de grafo
       this.app.graph.addNode(node.id, {
-        color: node.color,
-        originalColor: node.color,
+        originalColor: color,
         label: node.label,
         originalSize: node.size,
         attributes: this.isNil(node.attributes) ? null : node.attributes,
         index: i,
+        color,
         y,
         x,
         position,
@@ -342,7 +364,7 @@ export default class ReglGraph extends EventManager {
       this.app.sizeIndex.set(i, size)
       // Preenchendo os arrays para os shaders
       this.matrices.nodesPositions.push(position)
-      this.matrices.nodeColors.push(node.color ? this.glslColor(node.color, defaultNodesOpacity) : [1, 1, 1, defaultNodesOpacity])
+      this.matrices.nodeColors.push(this.glslColor(color, defaultNodesOpacity))
       this.matrices.sizes.push(size)
     })
     this.getOption('log') && console.info('Nós carregados:', nodes.length)
@@ -593,6 +615,34 @@ export default class ReglGraph extends EventManager {
   }
 
   /**
+   * Altera as cores dos nós com base nos valores de um atributo (partições)
+   * ou restaura as cores originais/iniciais se attribute não for informado (nulo).
+   * @param {string} attribute Nome do atributo dos nós. Default: NULL
+   */
+  colorNodesByAttribute (attribute = null) {
+    const defaultNodesOpacity = this.getOption('defaultNodesOpacity')
+    this.state.currentColorAttribute = attribute ?? this.settings.colorByAttribute
+    if (this.state.currentColorAttribute !== null && typeof this.colorMap[this.state.currentColorAttribute] === 'undefined') {
+      this.colorMap[this.state.currentColorAttribute] = new Map()
+    }
+    let colorMapIndex = 0
+    this.app.graph.forEachNode((node) => {
+      // Colorindo ou retomando a cor inicial/original
+      let color = node.data.originalColor
+      if (this.state.currentColorAttribute !== null) {
+        color = this.colorMap[this.state.currentColorAttribute].get(node.data.attributes[this.state.currentColorAttribute])
+        if (!color) {
+          color = palette[colorMapIndex++] ?? this.randomColor()
+          this.colorMap[this.state.currentColorAttribute].set(node.data.attributes[this.state.currentColorAttribute], color)
+        }
+      }
+      node.data.color = color
+      this.matrices.nodeColors[node.data.index] = this.glslColor(color, defaultNodesOpacity)
+    })
+    this.render()
+  }
+
+  /**
    * -------------------------------------------------------------------------------
    * RAYCASTER
    * -------------------------------------------------------------------------------
@@ -791,7 +841,7 @@ export default class ReglGraph extends EventManager {
       let content = `<strong>${node.data.label}</strong><hr>`
       tooltipAttributes.forEach((attr) => {
         content += `<div class="tooltip-attributes"> `
-        content += `<small>${attr}:</small> <strong>${node.data[attr]}</strong>`
+        content += `<small>${attr}:</small> <strong>${node.data[attr] ?? node.data.attributes[attr]}</strong>`
         content += `</div> `
       })
       return content
@@ -974,6 +1024,20 @@ export default class ReglGraph extends EventManager {
    * UTILS
    * -------------------------------------------------------------------------------
    */
+
+  /**
+   * Gera uma cor aleatória.
+   * Via: https://dev.to/zougari47/how-to-generate-random-color-with-javascript-4ama
+   * @returns Cor no formato hexadecimal. Ex: '#FF00FF'
+   */
+  randomColor () {
+    const hexArray = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 'A', 'B', 'C', 'D', 'E', 'F']
+    let code = ''
+    for (let i = 0; i < 6; i++) {
+     code += hexArray[Math.floor(Math.random()*16)]
+    }
+    return `#${code}`
+  }
 
   /**
    * Atribui um estilo ao cursor (mouse)
