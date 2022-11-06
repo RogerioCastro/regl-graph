@@ -72,7 +72,16 @@ export default class ReglGraph extends EventManager {
     this.scaleRGBToVec4 = scaleLinear()
       .domain([0, 255])
       .range([0, 1])
-    // Cache para partições de cores
+    /**
+     * Objeto de cache das partições de cores
+     * Cada partição é armazenada no formato
+     * colorMap = {
+     *  nome_do_atributo: new Map([[
+     *    valor_do_atributo,
+     *    { color: '#fff', nodes: ['id0', 'id1', ...] }
+     *  ]])
+     * }
+     */
     this.colorMap = {}
     // Configurações gerais
     this.settings = {
@@ -340,10 +349,16 @@ export default class ReglGraph extends EventManager {
       let color = node.color ?? node?.attributes?.color ?? this.settings.DefaultNodeColor
       // Cor, se for o caso
       if (this.settings.colorByAttribute) {
-        color = this.colorMap[this.settings.colorByAttribute].get(node.attributes[this.settings.colorByAttribute])
-        if (!color) {
+        color = this.colorMap[this.settings.colorByAttribute].get(node.attributes[this.settings.colorByAttribute])?.color ?? null
+        if (color === null) {
           color = palette[colorMapIndex++] ?? this.randomColor()
-          this.colorMap[this.settings.colorByAttribute].set(node.attributes[this.settings.colorByAttribute], color)
+          this.colorMap[this.settings.colorByAttribute].set(
+            node.attributes[this.settings.colorByAttribute],
+            { color, nodes: [node.id] }
+          )
+        } else {
+          const colorMapItem = this.colorMap[this.settings.colorByAttribute].get(node.attributes[this.settings.colorByAttribute])
+          colorMapItem.nodes.push(node.id)
         }
       }
       // Adicionando o nó no modelo de grafo
@@ -630,10 +645,16 @@ export default class ReglGraph extends EventManager {
       // Colorindo ou retomando a cor inicial/original
       let color = node.data.originalColor
       if (this.state.currentColorAttribute !== null) {
-        color = this.colorMap[this.state.currentColorAttribute].get(node.data.attributes[this.state.currentColorAttribute])
-        if (!color) {
+        color = this.colorMap[this.state.currentColorAttribute].get(node.data.attributes[this.state.currentColorAttribute])?.color ?? null
+        if (color === null) {
           color = palette[colorMapIndex++] ?? this.randomColor()
-          this.colorMap[this.state.currentColorAttribute].set(node.data.attributes[this.state.currentColorAttribute], color)
+          this.colorMap[this.state.currentColorAttribute].set(
+            node.data.attributes[this.state.currentColorAttribute],
+            { color, nodes: [node.id] }
+          )
+        } else {
+          const colorMapItem = this.colorMap[this.state.currentColorAttribute].get(node.data.attributes[this.state.currentColorAttribute])
+          colorMapItem.nodes.push(node.id)
         }
       }
       node.data.color = color
@@ -1017,6 +1038,23 @@ export default class ReglGraph extends EventManager {
     })
     this.loadBuffers('nodes')
     this.render()
+  }
+
+  /**
+   * Se os nós estiverem coloridos com base em algum atributo, este atributo é retornado
+   * @returns Nome do atributo
+   */
+  getCurrentPartition () {
+    return this.state.currentColorAttribute
+  }
+
+  /**
+   * Se os nós estiverem coloridos com base em algum atributo, retorna o Map que
+   * contém as informações do mapeamento de cores e nós dessa partição
+   * @param {String} attribute Nome do atributo de partição
+   */
+  getPartitionMap (attribute) {
+    return this.colorMap[attribute] ?? null
   }
 
   /**

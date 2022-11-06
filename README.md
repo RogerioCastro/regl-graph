@@ -204,6 +204,18 @@ graph.focusNode('optimist')
 /* Redimensiona os nós de acordo com os tamanhos mínimo e máximo fornecidos [min, max] */
 graph.resizeNodes([10, 60])
 
+/* Aplica cores aos nós com base nos valores de um determinado atributo categórico (partição) */
+graph.colorNodesByAttribute('year')
+
+/* Quando os nós estão coloridos com base em um atributo, retorna o nome deste atributo */
+graph.getCurrentPartition()
+
+/* 
+ * Retorna o mapeamento de cores e nós para um determinado atributo, caso ele já tenha sido
+ * executado via colorNodesByAttribute()
+ */
+graph.getPartitionMap('year')
+
 /* 'getAppInstance' Retorna algumas instâncias importantes da biblioteca */
 
 // Instância do objeto regl (https://github.com/regl-project/regl)
